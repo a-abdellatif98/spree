@@ -19,14 +19,18 @@ module Spree
         preference :match_policy, :string, default: MATCH_POLICIES.first
         preference :eligible_values, :hash
 
+        # We need this for automatic promotions when removing item that activated the promo
+        # Otherwise it will be an issue when using it with the Create Line Items promo action
         def applicable?(promotable)
-          promotable.is_a?(Spree::Order)
+          promotable.is_a?(Spree::Order) || (promotable.is_a?(Spree::LineItem) && promotion.present? && promotion.automatic?)
         end
 
         def eligible?(promotable, _options = {})
+          return false unless promotable.is_a?(Spree::Order)
+
           case preferred_match_policy
           when 'any'
-            promotable.line_items.any? { |item| actionable?(item) }
+            promotable.line_items.reload.any? { |item| actionable?(item) }
           end
         end
 
